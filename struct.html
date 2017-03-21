@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Составной тип данных</title>
+    <link rel="stylesheet" href="https://dl.dropboxusercontent.com/u/31437201/article.css">
+</head>
+<body>
+    <article class="page">
+        <h1>Составной тип данных</h1>
+        <aside class="plan">
+            <div class="contents">
+                <h2>План</h2>
+                <ol>
+                    <li><a href="#intro">Введение</a></li>
+                    <li><a href="#struct">Составной тип данных</a></li>
+                    <ol>
+                        <li><a href="#sizeof">Размерность</a></li>
+                    </ol>
+                    <li><a href="#typedef">Конструкция typedef</a></li>
+                    <li><a href="#use_struct">Использование составного типа данных</a></li>
+                    <ol>
+                        <li><a href="#init">Инициализация при объявлении</a></li>
+                        <li><a href="#access">Доступ к полям структуры</a></li>
+                        <li><a href="#pointer">Передача структуры по указателю</a></li>
+                        <li><a href="#init_after">Инициализация после объявления</a></li>
+                        <li><a href="#included_struct">Вложенные структуры</a></li>
+                    </ol>
+                    <li><a href="#task">Задача</a></li>
+                </ol>
+            </div>
+            <div class="links">
+            </div>
+        </aside>
+
+        <section>
+            <h2 id="intro">Введение</h2>
+            <p>Для начала стоит определиться, что же такое <em>тип данных</em>? Как всегда, сложно о простом пишет википедия:</p>
+            <blockquote cite="http://ru.wikipedia.org/wiki/%D0%A2%D0%B8%D0%BF_%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85">
+                Тип данных — фундаментальное понятие теории программирования. Тип данных определяет множество значений, набор операций, которые можно применять к таким значениям, и, возможно, способ реализации хранения значений и выполнения операций. Любые данные, которыми оперируют программы, относятся к определённым типам.
+            </blockquote>
+            <p>Проще говоря, тип данных — это некая «инструкция» компилятору о том, как данные представить, как их сохранить и что с ними можно делать.</p>
+            <p>Типы данных языка можно разделить две группы: примитивные и составные типы.</p>
+            <p><em>Примитивный тип (англ. primitive data type)</em> — тип данных, предоставляемый языком программирования как базовая встроенная единица языка. Также этот тип данных называют еще встроенным или базовым.</p>
+            <p><em>Составной тип (англ. composite data type)</em> — это любой тип данных, который может быть создан в программе с помощью примитивных типов данных языка и других составных типов.</p>
+
+            <p>Если немного почитать про <a href="http://ru.wikipedia.org/wiki/%D0%A2%D0%B8%D0%BF_%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85" target="_blank">тип данных</a> на википедии, то можно натолкнуться на такую фразу:</p>
+            <blockquote cite="http://ru.wikipedia.org/wiki/%D0%A2%D0%B8%D0%BF_%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85#.D0.91.D0.B0.D0.B7.D0.BE.D0.B2.D1.8B.D0.B5_.D1.82.D0.B8.D0.BF.D1.8B">
+                Каждый язык программирования поддерживает один или несколько встроенных типов данных (базовых типов), кроме того, развитые языки программирования предоставляют программисту возможность описывать собственные типы данных, комбинируя или расширяя существующие.
+            </blockquote>
+            <p>Напомню, что нам уже знакомы некоторые базовые типы данных из Си:</p>
+            <ul>
+                <li>символьные  — <code>char</code>;</li>
+                <li>целочисленные — <code>int</code>;</li>
+                <li>вещественные — <code>float</code>, <code>double</code>;</li>
+                <li>указатели — <code>ptrdiff_t</code>;</li>
+            </ul>
+            <p>С ними вроде бы все понятно. А что на счет составных типов в Си?</p>
+
+            <p>Язык Си относится к «развитым языкам программирования», и в нем можно создавать пользовательские типы данных. Составной тип данных является пользовательским, но не всякий пользовательский тип данных — составной. Как такое может быть разберемся чуть позже, а сейчас рассмотрим на деле, что же за зверь такой этот составной тип данных.</p>
+        </section>
+
+        <section>
+            <h2 id="struct">Составной тип данных</h2>
+            <p>Чтобы создать составной тип данных в Си, нам понадобится конструкция <code>struct</code>. Немного русской терминологии: у понятия <code>struct</code> в русском языке есть термин «структура». Когнитивный диссонанс наступает, когда нужно сказать «структура структуры может состоять из вложенных структур». Я постараюсь так не делать.</p>
+            <p><em>Структура</em> — это конструкция, внутри которой объявляется список переменных, который будет размещен в памяти под одним именем и будет доступен через единый указатель. Чем-то похоже на массив, но в отличии от него, структура может содержать переменные разных типов.</p>
+            <p>Проще всего суть структуры можно объяснить этим классическим примером:</p>
+            <code data-lang="c">struct Point {
+    int x;
+    int y;
+};</code>
+            <p>Переменные <code>x</code> и <code>y</code> называются <em>полями структуры</em>.</p>
+            <p>Теперь наряду со встроенными типами данных Си, у нас появился новый <em>тип данных</em> — <code>struct Point</code>. Да, именно такое у него название, длинное и немного странное, позже мы это исправим.</p>
+
+            <h3 id="sizeof">Размерность составного типа</h3>
+            <p>Проведем небольшой эксперимент и посмотрим размерность этого нового типа:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    struct Point {
+        int x, y; //Возможна и такая форма записи
+    };
+    
+    printf("%d\n", sizeof(struct Point)); //или "%lu\n" для Mac OS
+
+    return 0;
+}</code>
+            <samp>8</samp>
+            <p>Размерность <code>struct Point</code> — 8 байт. Откуда это число? Внутри него объявленны две переменные типа <code>int</code>, каждая по 4 байта. То есть, размер структуры зависит от типа и количества объявленных в нем переменных.</p>
+            <p>Иногда компилятор задействует такой механизм как <a href="http://ru.wikipedia.org/wiki/%D0%92%D1%8B%D1%80%D0%B0%D0%B2%D0%BD%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5_%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85" target="_blank">выравнивание</a>. Его работу видно на таком примере:</p>
+            <code data-lang="c" data-file="test.c">#include &lt;stdio.h&gt;
+
+int main() {
+    struct Test {
+        int x;
+        double y;
+        char z;
+    };
+    
+    printf("%d\n", sizeof(struct Test));
+
+    return 0;
+}</code>
+            <p>Попробуйте посчитать размер <code>struct Test</code> перед тем, как увидите результат в консоли.</p>
+            <p>Переменные внутри структуры рекомендуется располагать в порядке возрастания их размера, что может сэкономить память на ровном месте. Проведите этот нехитрый эксперимент с примером выше — поменяйте порядок переменных.</p>
+        </section>
+
+        <section>
+            <h2 id="typedef">Конструкция typedef</h2>
+            <p>Единожды объявив структуру, пользователь может использовать ее как и встроенные типы данных, например, объявлять переменные:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    struct Animal {
+        char name[10];
+        int  age;
+    };
+
+    struct Animal hamster;
+    struct Animal snake;
+    
+    return 0;
+}</code>
+            <p>Такая форма записи объявления переменных весьма громоздкая и может запутывать пользователя. Это можно исправить.</p>
+
+            <p>Для этих целей в языке Си существует конструкция <code>typedef</code>. Она позволяет создавать <em>пользовательский тип данных</em> на базе уже существующего. По сути, эта конструкция создает синоним названия типа данных. Например, объявим «новый» <code>int</code> и назовем его <code>ololo</code>:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef int ololo; //ololo — синоним для int
+
+    ololo x = 45;
+
+    printf("%d\n", x);
+
+    return 0;
+}</code>    
+            <p>Вот почему не всякий пользовательский тип — составной.</p>
+            <p>Как видно, «переименованные» типы данных ведут себя точно так же как и оригиналы. Эта конструкция вполне работает и со структурой:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    struct Animal {
+        char name[10];
+        int  age;
+    };
+
+    typedef struct Animal Animal;
+
+    //зато теперь можно так:
+    Animal hamster;
+    Animal snake;
+
+    return 0;
+}</code>
+            <p>Девятая строка взрывает мозг. Ее можно упростить, применив <code>typedef</code> сразу к <code>struct</code>. В этом случае не обязательно указывать имя для структуры, такая структура называется анонимной.</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster;
+    Animal snake;
+
+    return 0;
+}</code>
+            <p>Кэп провел аналогию с «переименованием» <code>int</code>:</p>
+            <code data-lang="c">typedef int                              ololo;
+typedef struct {char name[10]; int age;} Animal;
+typedef &lt;существуюший тип&gt;               &lt;синоним для него&gt;;</code>
+            <p>Ну, теперь все понятно и лаконично — у нас теперь есть составной тип данных <code>Animal</code>, поздравляю. Продолжим терзать <code>struct</code>.</p>
+        </section>
+
+
+        <section>
+            <h2 id="use_struct">Использование составного типа данных</h2>
+            <p>Составной тип данных мало чем отличается по своему поведению от базовых. Основное отличие заключается в отстутствии встроенного функционала при работе с составными типами. Например, для того, чтобы сравнить два целых числа мы можем воспользоваться встроенным функционалом языка, применив оператор <code>==</code>, а что если нам нужно сравнить две структуры <code>Animal</code>? Как вообще понять, что именно нужно сравнивать? Вот в таком случае нам нужно писать нужный функционал самостоятельно. Но не будем забегать наперед, давайте обо всем по порядку.</p>
+            <h3 id="init">Инициализация при объявлении</h3>
+            <p>Рассмотрим, как можно объявить и инициализировать переменные составного типа:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster = {"Bobby", 3};
+    Animal snake   = {"Alyona", 12};
+
+    return 0;
+}</code>
+            <p>Чем-то напоминает инициализацию массива, только значения передаем разных типов, в том порядке, в котором они указаны при объявлении структуры.</p>
+            <p>Также можно объявить и инициализировать, например, массив животных:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster    = {"Bobby", 3};
+    Animal snake      = {"Alyona", 12};
+
+    //массив структур
+    Animal animals[2] = {hamster, snake};
+
+    return 0;
+}</code>
+            <p>И сохранить указатель на хомяка, например:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster    = {"Bobby", 3};
+    Animal snake      = {"Alyona", 12};
+    Animal animals[2] = {hamster, snake};
+
+    //указатель на структуру hamster
+    Animal *p = &amp;hamster;
+
+    printf("%p\n", p);
+
+    return 0;
+}</code>
+            <p>Было бы неплохо, если бы мы могли как-то убедиться, что это все работает, а не только указатели печатать. Можно вывести в консоль возраст хомячка. Как?</p>
+
+            <h3 id="access">Доступ к полям структуры</h3>
+            <p>Доступ к полям структуры осуществляется через оператор доступа <code>.</code> (точка). Попробуем напечатать возраст хомяка из переменной <code>hamster</code> и из соответствующего элемента массива животных:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster    = {"Bobby", 3};
+    Animal snake      = {"Alyona", 12};
+    Animal animals[2] = {hamster, snake};
+
+    printf("%d\n", hamster.age);
+    printf("%d\n", animals[0].age);
+
+    return 0;
+}</code>
+            <p>Таким же способом можно и изменять значения полей структуры:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster    = {"Bobby", 3};
+    Animal snake      = {"Alyona", 12};
+    Animal animals[2] = {hamster, snake};
+
+    printf("%d\n", hamster.age);
+
+    hamster.age = 23;
+
+    printf("%d\n", hamster.age);
+    //а вот тут нюанс:
+    printf("%d\n", animals[0].age);
+
+    return 0;
+}</code>
+            <samp>3
+23
+3</samp>
+            <p>Забавный нюанс нарисовался при выводе в 19 строке. Почему же значение в массиве не поменялось?</p>
+            <h3 id="pointer">Передача структуры по указателю</h3>
+            <p>При передаче переменной <code>hamster</code> в массив, она была, по сути, скопирована. Это означает, что у нас теперь есть два экземпляра нашего хомяка, мы его успешно клонировали. Один живет в <code>main()</code>, под именем <code>hamster</code>, а второй в массиве <code>animals[]</code>, под именем <code>animals[0]</code>. Отсюда и различные значения возраста хомяка в предыдущем примере. Что же делать, чтобы хомяки бесконтрольно не плодились? Передавать по указателю.</p>
+            <p>Такой подход оправдан еще и с точки зрения экономии памяти. Составной тип данных может быть достаточно большого размера, и постоянно создавать его копии — верный путь к переполнению стэка. Итак, при инициализации массива животных, передаем в него указатели на переменные <code>hamster</code> и <code>snake</code>:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster     = {"Bobby", 3};
+    Animal snake       = {"Alyona", 12};
+    Animal *animals[2] = {&amp;hamster, &amp;snake};
+    //теперь у нас массив указателей, о чем свидетельствует *
+
+    printf("%d\n", hamster.age);
+
+    hamster.age = 23;
+
+    printf("%d\n", hamster.age);
+    //меняем оператор доступа, теперь все ок
+    printf("%d\n", animals[0]->age);
+
+    return 0;
+}</code>
+            <p>В случае, когда структура передается по указателю — доступ к ее полям осуществляется с помощью другого оператора доступа: <code>-></code> (стрелка), как в строке 20. Вот теперь все в порядке — в <code>main()</code> и в <code>animals[]</code> один и тот же хомяк.</p>
+
+            <p>Посмотрим на адреса структуры <code>hamster</code> и ее полей:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster = {"Bobby", 3};
+    Animal *p      = &hamster;
+
+    printf("%p\n", p);                //адрес структуры hamster
+    printf("%p\n", p->name);          //адрес поля name
+    printf("%p\n", &amp;p->age);          //адрес поля age
+    printf("%lu\n", sizeof(hamster)); //размер структуры
+
+    return 0;
+}</code>
+            <samp>0x7fff55a69c50
+0x7fff55a69c50
+0x7fff55a69c5c
+16</samp>
+            <p>Как видно, адрес структуры совпадает с адресом первого поля — <code>name</code>, что логично. А адрес поля <code>age</code> идет с определеным смещением — 12 бит. В данном примере сработал механизм выравнивания и вместо предполагаемых 10 байт, под поле <code>name</code> система выделила 12 байт.</p>
+            <p>Поскольку строка в Си, как и массив, сама по себе адрес, то конструкция <code>p->name</code> даст нам сразу адрес. А вот адрес поля <code>age</code> нужно брать с помощью соответствующего оператора — <code>&amp;</code>.</p>
+
+            <h4>Структуры и функции</h4>
+            <p>Стоит отметить, что нам никто не запрещает передавать в функцию копию структуры. Это целесообразно в том случае, если нам нужна именно копия или если структура небольшого размера. Рассмотрим ситуацию с передачей копии структуры в функцию:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+void printAnimal(Animal animal) {
+    //переменная animal — копия переданной в функцию структуры
+
+    printf("%s is %d years old\n", animal.name, animal.age);
+}
+
+int main() {
+    typedef struct {
+        char name[10];
+        int  age;
+    } Animal;
+
+    Animal hamster = {"Bobby", 3};
+    Animal snake   = {"Alyona", 12};
+
+    printAnimal(hamster);
+    printAnimal(snake);
+
+    return 0;
+}</code>
+            <p>Получим ошибку компиляции:</p>
+            <samp>error: unknown type name 'Animal'
+void printAnimal(Animal *animal) {
+                 ^
+1 error generated.
+</samp>
+            <p>Потому, что функции <code>printAnimal()</code> еще ничего не известно о типе данных <code>Animal</code>, так как его область видимости ограничивается функцией <code>main()</code>. Что делать? Перенести объявление пользовательского типа выше всех функций, в которых он будет использован:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+typedef struct {
+    char name[10];
+    int  age;
+} Animal;
+
+void printAnimal(Animal animal) {
+    printf("%s is %d years old\n", animal.name, animal.age);
+}
+
+int main() {
+    Animal hamster = {"Bobby", 3};
+    Animal snake   = {"Alyona", 12};
+
+    printAnimal(hamster);
+    printAnimal(snake);
+
+    return 0;
+}</code>
+            <p>Вот, теперь другое дело:</p>
+            <samp>Bobby is 3 years old
+Alyona is 12 years old</samp>
+
+            <p>Оценив ситуацию, можно понять, что наш тип данных <code>Animal</code> не так уж и мал, и что передавать каждый раз копию переменных этого типа весьма накладно. Поэтому его стоит передавать по указателю:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+typedef struct {
+    char name[10];
+    int  age;
+} Animal;
+    
+void printAnimal(Animal *animal) {
+    //меняется оператор доступа на ->
+    printf("%s is %d years old\n", animal->name, animal->age);
+}
+
+int main() {
+    Animal hamster = {"Bobby", 3};
+    Animal snake   = {"Alyona", 12};
+
+    //передаем в функцию указатель на переменные hamster и snake
+    printAnimal(&amp;hamster);
+    printAnimal(&amp;snake);
+
+    return 0;
+}</code>
+            
+            <h3 id="init_after">Инициализация после объявления</h3>
+            <p>Как уже известно, разработчики языка Си не предоставляют инструменты для работы с пользовательскими типами данных и нам нужно писать все самостоятельно. Кое-что мы уже реализовали — функцию <code>printAnimal()</code>, неплохо было бы реализовать еще и функцию, которая будет инициализировать тип <code>Animal</code>, ведь «стандартным» способом это сделать не получится:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+typedef struct {
+    char name[10];
+    int  age;
+} Animal;
+    
+void printAnimal(Animal *animal) {
+    printf("%s is %d years old\n", animal->name, animal->age);
+}
+
+int main() {
+    //объявление структуры
+    Animal hamster;
+    Animal snake;
+
+    //инициализируем структуру после объявления
+    hamster = {"Bobby", 3};
+    snake   = {"Alyona", 12};
+
+    printAnimal(&amp;hamster);
+    printAnimal(&amp;snake);
+
+    return 0;
+}</code>
+            <p>Получаем ошибки:</p>
+            <samp>file.c:16:15: error: expected expression
+    hamster = {"Bobby", 3};
+              ^
+file.c:17:13: error: expected expression
+    snake = {"Alyona", 12}
+            ^
+2 errors generated.</samp>
+            <p>Итак, напишем функцию, которая будет наполнять хомяка и змею из консоли. Обратите внимание на строку 9: если нужно записать значение по адресу, то нужно брать адрес всей конструкции <code>animal->age</code>, а не только <code>animal</code>, потому-то там и скобки.</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+typedef struct {
+    char name[10];
+    int  age;
+} Animal;
+
+void initAnimal(Animal *animal) {
+    scanf("%9s %d", animal->name, &amp;(animal->age));
+}
+
+void printAnimal(Animal *animal) {
+    printf("%s is %d years old\n", animal->name, animal->age);
+}
+
+int main() {
+    Animal hamster;
+    Animal snake;
+
+    initAnimal(&amp;hamster);
+    initAnimal(&amp;snake);
+
+    printAnimal(&amp;hamster);
+    printAnimal(&amp;snake);
+
+    return 0;
+}</code>
+            <h3 id="included_struct">Вложенные структуры</h3>
+            <p>В этой статье упоминалось, что структура может содержать в себе другую структуру, в качестве поля. Такое поле называется <em>вложенной структурой</em>. Тип вложенной структуры должен быть объявлен раньше. Кроме того, структура не может быть вложена в структуру того же типа, отгадайте почему.</p>
+            <p>Добавим нашим животным поле, указывающее их местоположение:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+//новый тип данных Point
+typedef struct {
+    int x, y;
+} Point;
+
+typedef struct {
+    char  name[10];
+    int   age;
+    Point location; //вложенная в Animal структура 
+} Animal;
+
+void initAnimal(Animal *animal) {
+    scanf("%9s %d", animal->name, &amp;(animal->age));
+
+    //обратите внимание, что доступ к полям вложенной структуры через точку
+    scanf("%d %d", &amp;(animal->location.x), &amp;(animal->location.y));
+}
+
+void printAnimal(Animal *animal) {
+    printf("%s is %d years old, ", animal->name, animal->age);
+    printf("located at (%d, %d)\n", animal->location.x, animal->location.y);
+}
+
+int main() {
+    Animal hamster;
+    Animal snake;
+
+    //инициализация вложенной структуры:
+    //Animal hamster = {"Bobby", 3, {2, 8}};
+    //Animal snake = {"Alyona", 19, {3, 1}};
+
+    initAnimal(&amp;hamster);
+    initAnimal(&amp;snake);
+
+    printAnimal(&amp;hamster);
+    printAnimal(&amp;snake);
+
+    return 0;
+}</code>
+            <samp>Bobby 41
+1 2      
+Alyona 18
+3 4
+Bobby is 41 years old, located at (1, 2)
+Alyona is 18 years old, located at (3, 4)</samp>
+            <p>Напоследок напишем функцию, которая будет изменять местоположение животного:</p>
+            <code data-lang="c">#include &lt;stdio.h&gt;
+
+typedef struct {
+    int x, y;
+} Point;
+
+typedef struct {
+    char  name[10];
+    int   age;
+    Point location;
+} Animal;
+
+void initAnimal(Animal *animal) {
+    scanf("%9s %d", animal->name, &amp;(animal->age));
+    scanf("%d %d", &amp;(animal->location.x), &amp;(animal->location.y));
+}
+
+void printAnimal(Animal *animal) {
+    printf("%s is %d years old, ", animal->name, animal->age);
+    printf("located at (%d, %d)\n", animal->location.x, animal->location.y);
+}
+
+void moveAnimal(Animal *animal, Point location) {
+    animal->location.x = location.x;
+    animal->location.y = location.y;
+}
+
+int isEqualPoint(Point a, Point b) {
+    return a.x == b.x &amp;&amp; a.y == b.y;
+}
+
+int main() {
+    Animal hamster;
+    Animal snake;
+
+    initAnimal(&amp;hamster);
+    initAnimal(&amp;snake);
+
+    printAnimal(&amp;hamster);
+    printAnimal(&amp;snake);
+
+    moveAnimal(&amp;snake, hamster.location);
+
+    printAnimal(&amp;hamster);
+    printAnimal(&amp;snake);
+
+    if ( isEqualPoint(snake.location, hamster.location) ) {
+        printf("Hamster %s is dead, ", hamster.name);
+        printf("snake %s is happy.\n", snake.name);
+    }
+
+    return 0;
+}</code>
+            <samp>Bobby 12
+1 2
+Alyona 44
+10 13
+Bobby is 12 years old, located at (1, 2)
+Alyona is 44 years old, located at (10, 13)
+Bobby is 12 years old, located at (1, 2)
+Alyona is 44 years old, located at (1, 2)
+Hamster Bobby is dead, snake Alyona is happy.</samp>
+        </section>
+        <section>
+            <h2 id="task">Задача</h2>
+            <p>Создать структуру <code>Car</code>, с полями <code>model</code>, <code>fuel</code> и <code>location</code>. Машина приходит с завода с пустым баком, ее нужно заправить ( функция <code>refill</code>). Машина может ехать (функция <code>move</code>), если есть бензин и не ехать, если бензина нет. Во время езды бензин ощутимо расходуется.</p>
+            <p>Создать несколько машин. Присвоить им название моделей и первичную точку координат. Заправить и отправить их в путь. Если машины окажутся в одной и той же точке, значит случилось ДТП. ДТП случилось.</p>
+            <p>Если вывести в консоль структуру <code>Car</code>, должно отобразиться: модель, количество бензина и текущая позиция.</p>
+        </section>
+
+        <footer>
+            <address>
+                Автор Gara. 
+            </address>
+            <time datetime="2013-12-16">16.12.2013</time>
+        </footer>
+    </article>
+    <script type="text/javascript" src="https://dl.dropboxusercontent.com/u/31437201/code.js"></script>
+</body>
+</html>
